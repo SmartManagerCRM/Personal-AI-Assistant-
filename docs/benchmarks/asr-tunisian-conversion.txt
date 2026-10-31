@@ -1,0 +1,20 @@
+# Raw results — Tunisian Whisper conversion benchmark (Linux x86_64 host, 4 cores, sherpa-onnx 2.0.1 Python wheel; NOT a phone)
+
+## Test A: TunSwitch validation (MBZUAI/TunSwitch), 164 utts <=30 s (18.4 min), code-switched Tunisian — possible training-domain overlap for the fine-tunes
+{"name": "tiny-tn", "engine": "sherpa-onnx-int8", "lang": "ar", "n": 164, "wer": 72.4, "cer": 46.9, "rtf": 0.053, "mean_lat_s": 0.35, "load_s": 0.73, "peak_rss_mb": 364}
+{"name": "tiny-tn", "engine": "sherpa-onnx-fp32", "lang": "ar", "n": 164, "wer": 73.1, "cer": 46.0, "rtf": 0.061, "mean_lat_s": 0.4, "load_s": 1.01, "peak_rss_mb": 618}
+{"name": "small-tn", "engine": "sherpa-onnx-int8", "lang": "ar", "n": 164, "wer": 47.2, "cer": 28.1, "rtf": 0.204, "mean_lat_s": 1.34, "load_s": 1.21, "peak_rss_mb": 1101}
+{"name": "base-official", "engine": "sherpa-onnx-int8", "lang": "ar", "n": 164, "wer": 98.8, "cer": 68.9, "rtf": 0.136, "mean_lat_s": 0.89, "load_s": 0.82, "peak_rss_mb": 740}
+{"name": "base-official-auto", "engine": "sherpa-onnx-int8", "lang": "auto", "n": 164, "wer": 106.0, "cer": 74.4, "rtf": 0.134, "mean_lat_s": 0.88, "load_s": 0.84, "peak_rss_mb": 750}
+
+## Test B: unseen podcast speech (oddadmix/arabic-audio-collection-tunisian-deep-confessions, shard 34, 100 random clips 2-20 s, 20.6 min); references are diacritized transcripts of unknown provenance
+{"set": "dc", "name": "small-tn", "engine": "sherpa-onnx-int8", "lang": "ar", "n": 100, "wer": 63.6, "cer": 34.5, "rtf": 0.196, "mean_lat_s": 2.42, "load_s": 1.98, "peak_rss_mb": 1146}
+{"set": "dc", "name": "tiny-tn", "engine": "sherpa-onnx-int8", "lang": "ar", "n": 100, "wer": 94.0, "cer": 64.0, "rtf": 0.048, "mean_lat_s": 0.59, "load_s": 0.45, "peak_rss_mb": 402}
+{"set": "dc", "name": "base-official", "engine": "sherpa-onnx-int8", "lang": "ar", "n": 100, "wer": 93.1, "cer": 58.8, "rtf": 0.144, "mean_lat_s": 1.78, "load_s": 0.77, "peak_rss_mb": 772}
+
+## PyTorch fp32 (HF generate, greedy, language=ar), Test A
+{"name": "small-tn", "engine": "pytorch-fp32", "n": 164, "wer": 45.3, "cer": 22.7, "rtf": 1.735, "mean_lat_s": 11.41}
+{"name": "base-openai", "engine": "pytorch-fp32", "n": 164, "wer": 196.0, "cer": 136.9, "rtf": 0.178, "mean_lat_s": 1.17}
+{"name": "tiny-tn", "engine": "pytorch-fp32", "n": 164, "wer": 77.1, "cer": 46.1, "rtf": 0.068}
+
+## Conversion exactness (tiny, 25 utts, onnxruntime greedy loop vs HF generate, same mel): fp32 token-identical 25/25; int8 0/25 token-identical (WER effect below)

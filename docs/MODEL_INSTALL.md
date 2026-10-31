@@ -18,5 +18,8 @@ Download the files on a PC (URLs are in `ModelCatalog.kt` / the model cards), co
 ## Building the local-LLM runtime
 `scripts/fetch-llama-cpp.sh` downloads the llama.cpp sources from the pinned PyPI sdist (no GitHub needed); with the NDK 27.2 + CMake 3.22 installed, Gradle then compiles `libsmartllama.so` for arm64-v8a. The APK delivered with this project already contains it. `scripts/fetch-sherpa-onnx.sh` fetches the sherpa-onnx AAR (hash-pinned) and runs automatically before every build.
 
+## Tunisian speech model (import-only)
+"Whisper Small — Tunisian" is not downloadable: it is a conversion. Run `scripts/asr-conversion` (README there) to produce `small-tn-encoder.int8.onnx`, `small-tn-decoder.int8.onnx`, `small-tn-tokens.txt`, copy them to the phone and use *Import file* on that entry. The importer checks the catalog's SHA-256; a re-conversion on another machine gives different hashes — update `ModelCatalog.kt` (or set the hash to null) accordingly. The model forces Arabic (`ar`) decoding. Needs ≈1.1 GB RAM while loaded.
+
 ## Adding a better Tunisian ASR model
 Export an Apache-2.0 Tunisian Whisper fine-tune with sherpa-onnx's `scripts/whisper/export-onnx.py`, INT8-quantise, then add a `ModelEntry` (kind ASR, files `encoder*.onnx`, `decoder*.onnx`, `tokens.txt`, with SHA-256) to `ModelCatalog`. The loader discovers file names generically.

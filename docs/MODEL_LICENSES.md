@@ -10,6 +10,9 @@ Verify again before any commercial release; this register records what was found
 | KWS Zipformer 3.3M (English) | `mobilebytesensei/sherpa-onnx-kws-zipformer-gigaspeech-3.3M` | Apache-2.0 tag | **verify GigaSpeech data terms** | 6 MB |
 | Qwen3-1.7B Q4_K_M GGUF | `unsloth/Qwen3-1.7B-GGUF` | Apache-2.0 (Qwen3) | yes | 1.1 GB; SHA-256 verified against the downloaded file |
 
+| Whisper Small — Tunisian Derja, converted to sherpa-onnx INT8 (import-only) | `TheBiggyBang/whisper-small-tunisian-derja` + `scripts/asr-conversion` | Apache-2.0 tag (base: Whisper MIT) | yes, **with CC-BY-4.0 attribution** for the LinTO training data (`linagora/linto-dataset-audio-ar-tn`); the LinTO corpora themselves include TunSwitch/ApprendreLeTunisien — verify their terms | 413 MB; hashes pinned to the author's conversion build |
+| Whisper Tiny — Tunisian (`awaxsama/whisper-tiny-tunisian-arabic`) | converted for testing only | Apache-2.0 tag | not shipped: no better than stock Base on unseen data; training sources include TunSwitch | |
+
 ## Evaluated and **excluded**
 | Model | Reason |
 |---|---|
