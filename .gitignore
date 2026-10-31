@@ -13,3 +13,6 @@ license-private-key*
 *.onnx
 app/libs/*.aar
 app/src/main/cpp/llama.cpp/
+dist/
+app/.cxx/
+.cxx/
