@@ -7,7 +7,7 @@ import java.text.Normalizer
  * into the token sequence that a sherpa-onnx keyword-spotting model expects, entirely on the device.
  * Validated against the reference `sentencepiece` library in WakeWordTokenizerTest.
  */
-class SentencePieceBpe(modelBytes: ByteArray) {
+class SentencePieceEncoder(modelBytes: ByteArray) {
     private class Piece(val text: String, val score: Float, val type: Int)
     private val pieces = ArrayList<Piece>()
     private val index = HashMap<String, Int>()

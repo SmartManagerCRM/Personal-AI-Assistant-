@@ -1,12 +1,12 @@
 package com.smartmanager.ai.core
 
-import com.smartmanager.ai.core.wake.SentencePieceBpe
+import com.smartmanager.ai.core.wake.SentencePieceEncoder
 import org.junit.Assert.*
 import org.junit.Test
 
 /** Reference tokenizations produced with Python `sentencepiece` on the same bpe.model (sherpa-onnx-kws-zipformer-gigaspeech-3.3M, Apache-2.0). */
 class WakeWordTokenizerTest {
-    private val bpe = SentencePieceBpe(javaClass.getResourceAsStream("/kws/bpe.model")!!.readBytes())
+    private val bpe = SentencePieceEncoder(javaClass.getResourceAsStream("/kws/bpe.model")!!.readBytes())
 
     @Test fun `matches reference sentencepiece output`() {
         val ref = mapOf(
