@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="com.smartmanager.ai.assistant.SmartVoiceInteractionSessionService"
+    android:recognitionService="com.smartmanager.ai.assistant.SmartRecognitionService"
+    android:settingsActivity="com.smartmanager.ai.MainActivity"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="true"
+    android:supportsLocalInteraction="false" />

@@ -11,3 +11,4 @@ license-private-key*
 *.model
 *.gguf
 *.onnx
+app/libs/*.aar
