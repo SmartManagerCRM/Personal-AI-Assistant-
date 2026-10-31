@@ -162,7 +162,7 @@ fun ModelsScreen(vm: AppViewModel, onBack: () -> Unit) {
                     Text("Status: " + if (installed) "installed" else "${vm.models.installedBytes(e) / 1_000_000} / ${e.totalBytes / 1_000_000} MB present")
                     prog?.takeIf { it.modelId == e.id }?.let { p -> if (p.error != null) Text(p.error, color = MaterialTheme.colorScheme.error) else if (!p.finished) { LinearProgressIndicator(progress = { (p.doneBytes.toFloat() / maxOf(p.totalBytes, 1)).coerceIn(0f, 1f) }, Modifier.fillMaxWidth()); Muted("${p.file} ${p.doneBytes / 1_000_000}/${p.totalBytes / 1_000_000} MB") } }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (!installed) Button(onClick = { vm.download(e) }) { Text(stringResource(R.string.install)) }
+                        if (!installed && !e.importOnly) Button(onClick = { vm.download(e) }) { Text(stringResource(R.string.install)) }
                         OutlinedButton(onClick = { importFor = e; picker.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.import_file)) }
                         if (installed || vm.models.installedBytes(e) > 0) OutlinedButton(onClick = { vm.models.remove(e) }) { Text(stringResource(R.string.remove)) }
                     }

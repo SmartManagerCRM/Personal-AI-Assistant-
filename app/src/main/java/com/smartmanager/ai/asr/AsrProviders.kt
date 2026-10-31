@@ -61,7 +61,7 @@ class SherpaWhisperAsr @Inject constructor(private val models: ModelManager) : W
         val cfg = OfflineRecognizerConfig(
             featConfig = FeatureConfig(sampleRate = 16000, featureDim = 80),
             modelConfig = OfflineModelConfig(
-                whisper = OfflineWhisperModelConfig(encoder = enc, decoder = dec, language = "", task = "transcribe", tailPaddings = 1000),
+                whisper = OfflineWhisperModelConfig(encoder = enc, decoder = dec, language = e.language, task = "transcribe", tailPaddings = 1000),
                 tokens = tokens, numThreads = 4, debug = false, provider = "cpu", modelType = "whisper",
             ),
             decodingMethod = "greedy_search",

@@ -36,6 +36,7 @@ class ModelManager @Inject constructor(@ApplicationContext private val ctx: Cont
 
     suspend fun download(e: ModelEntry): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
+            if (e.importOnly) error("${e.title} has no download URL — build it with scripts/asr-conversion and use Import file")
             gate.require("model download: ${e.title}")
             if (freeBytes() < e.totalBytes * 12 / 10) error("Not enough free space (${e.totalBytes / 1_000_000} MB needed)")
             val d = dir(e.id).apply { mkdirs() }

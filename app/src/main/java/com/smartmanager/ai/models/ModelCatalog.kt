@@ -9,7 +9,13 @@ data class ModelEntry(
     val files: List<ModelFile>, val license: String, val commercialUse: String, val languages: String, val runtime: String,
     /** Minimum free RAM guidance in MB. */
     val ramMb: Int = 0,
-) { val totalBytes get() = files.sumOf { it.sizeBytes } }
+    /** Whisper language code forced for this model ("" = auto-detect). Tunisian fine-tunes were trained with "ar". */
+    val language: String = "",
+) {
+    val totalBytes get() = files.sumOf { it.sizeBytes }
+    /** True when no download URL exists (locally converted model): installable with "Import file" only. */
+    val importOnly get() = files.any { it.url.isBlank() }
+}
 
 /**
  * Catalog of downloadable models. URLs, sizes and SHA-256 values were read from the Hugging Face API (Oct 2026).
@@ -50,6 +56,16 @@ object ModelCatalog {
                 ModelFile("tokens.txt", "$HF/dmouayad/sherpa-onnx-whisper-large-v3-turbo-arabic-dialectal-v2/resolve/main/tokens.txt", 816_730, "b34b360dbb493e781e479794586d661700670d65564001f23024971d1f2fa126"),
             ),
             "Apache-2.0 (repository tag; base: OpenAI Whisper MIT, fine-tune dataset lahgtna-v3-small — verify dataset terms before commercial release)", "Verify dataset terms", "Arabic dialects (Tunisian among 13); no FR/EN focus", "sherpa-onnx", 2500,
+        ),
+        ModelEntry(
+            "asr-whisper-small-tunisian-int8", ModelKind.ASR, "Speech recognition — Whisper Small, Tunisian Derja (INT8) — converted, IMPORT ONLY",
+            "Fine-tune of Whisper Small for Tunisian Arabic incl. French/English code-switching, converted to sherpa-onnx by docs/asr-conversion (413 MB). Benchmarked on a Linux host, not on a phone. Not hosted anywhere: build it with scripts/asr-conversion and import the three files.",
+            listOf(
+                ModelFile("small-tn-encoder.int8.onnx", "", 112246394, "53650a220f5c7450de7606aba196e3707fa6561a0308d0c26b2658c350f6d103"),
+                ModelFile("small-tn-decoder.int8.onnx", "", 300643116, "cd7bc464527d8cd74ae844ab7dd1eca988d190ea55cf5d8648b84213df6b031d"),
+                ModelFile("small-tn-tokens.txt", "", 816730, "b34b360dbb493e781e479794586d661700670d65564001f23024971d1f2fa126"),
+            ),
+            "Apache-2.0 (TheBiggyBang/whisper-small-tunisian-derja; base OpenAI Whisper MIT). Trained on linagora/linto-dataset-audio-ar-tn (CC-BY-4.0, attribution required)", "Yes with CC-BY attribution (verify LinTO source corpora)", "Tunisian Arabic + FR/EN code-switching", "sherpa-onnx", 1500, "ar",
         ),
         ModelEntry(
             "llm-qwen3-1.7b-q4km", ModelKind.LLM, "Local brain — Qwen3 1.7B (Q4_K_M)",
