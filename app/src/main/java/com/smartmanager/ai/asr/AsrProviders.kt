@@ -27,41 +27,48 @@ interface AsrProvider { val id: String; val displayName: String; fun isAvailable
 interface WaveformAsr : AsrProvider { suspend fun transcribe(samples: FloatArray, sampleRate: Int): AsrResult?; fun unload() }
 interface MicrophoneAsr : AsrProvider { suspend fun listen(timeoutMs: Long, hint: Lang): AsrResult? }
 
-/** Whisper (multilingual, INT8) through sherpa-onnx. Language is auto-detected per utterance. Heavy → loaded on demand and released after idle. */
+/** Whisper (multilingual, INT8) through sherpa-onnx. Any ASR entry of the catalog that uses the sherpa Whisper layout can be selected. Language is auto-detected per utterance. Heavy → loaded on demand, released after idle. */
 @Singleton
 class SherpaWhisperAsr @Inject constructor(private val models: ModelManager) : WaveformAsr {
-    override val id = "sherpa-whisper-base"; override val displayName = "Whisper Base (offline)"
-    private val entry get() = ModelCatalog.byId("asr-whisper-base-int8")!!
+    override val id = "sherpa-whisper"; override val displayName = "Whisper (offline, sherpa-onnx)"
     private var rec: OfflineRecognizer? = null
+    private var loadedId: String? = null
     private val lock = Any()
+    /** Catalog id of the ASR model to use (set from settings). */
+    @Volatile var selectedId: String = ModelCatalog.entries.first { it.kind == com.smartmanager.ai.models.ModelKind.ASR }.id
     @Volatile var lastLoadMs = -1L; private set
-    override fun isAvailable() = models.isInstalled(entry)
-    override val note get() = if (isAvailable()) "" else "Install the Whisper model in AI models"
+    private val entry get() = ModelCatalog.byId(selectedId)
+    override fun isAvailable() = entry?.let { models.isInstalled(it) } == true
+    override val note get() = if (isAvailable()) "" else "Install a Whisper model in AI models"
 
     override suspend fun transcribe(samples: FloatArray, sampleRate: Int): AsrResult? = withContext(Dispatchers.Default) {
         val t0 = System.currentTimeMillis()
-        val r = synchronized(lock) { rec ?: load().also { rec = it } } ?: return@withContext null
+        val r = synchronized(lock) { if (loadedId != selectedId) { rec?.release(); rec = null }; rec ?: load().also { rec = it; loadedId = selectedId } } ?: return@withContext null
         val s = r.createStream()
         try {
             s.acceptWaveform(samples, sampleRate); r.decode(s)
             val res = r.getResult(s)
-            AsrResult(res.text.trim(), res.lang.takeIf { it.isNotBlank() }?.trim('<', '|', '>', '/'), System.currentTimeMillis() - t0, id)
+            AsrResult(res.text.trim(), res.lang.takeIf { it.isNotBlank() }?.trim('<', '|', '>', '/'), System.currentTimeMillis() - t0, selectedId)
         } finally { s.release() }
     }
 
     private fun load(): OfflineRecognizer? {
-        val d = models.dir(entry.id); val t0 = System.currentTimeMillis()
+        val e = entry ?: return null
+        val d = models.dir(e.id); val t0 = System.currentTimeMillis()
+        fun pick(token: String): String? = d.listFiles()?.filter { it.name.contains(token) && it.name.endsWith(".onnx") }?.minByOrNull { if (it.name.contains("int8")) 0 else 1 }?.absolutePath
+        val enc = pick("encoder") ?: return null; val dec = pick("decoder") ?: return null
+        val tokens = d.listFiles()?.firstOrNull { it.name.endsWith("tokens.txt") }?.absolutePath ?: return null
         val cfg = OfflineRecognizerConfig(
             featConfig = FeatureConfig(sampleRate = 16000, featureDim = 80),
             modelConfig = OfflineModelConfig(
-                whisper = OfflineWhisperModelConfig(encoder = File(d, "base-encoder.int8.onnx").absolutePath, decoder = File(d, "base-decoder.int8.onnx").absolutePath, language = "", task = "transcribe", tailPaddings = 1000),
-                tokens = File(d, "base-tokens.txt").absolutePath, numThreads = 4, debug = false, provider = "cpu", modelType = "whisper",
+                whisper = OfflineWhisperModelConfig(encoder = enc, decoder = dec, language = "", task = "transcribe", tailPaddings = 1000),
+                tokens = tokens, numThreads = 4, debug = false, provider = "cpu", modelType = "whisper",
             ),
             decodingMethod = "greedy_search",
         )
         return OfflineRecognizer(config = cfg).also { lastLoadMs = System.currentTimeMillis() - t0 }
     }
-    override fun unload() = synchronized(lock) { rec?.release(); rec = null }
+    override fun unload() = synchronized(lock) { rec?.release(); rec = null; loadedId = null }
 }
 
 /** Android's SpeechRecognizer as a fallback when no offline model is installed. On-device on API 33+ when a language pack exists; some devices fall back to Google servers (disclosed in the UI). */

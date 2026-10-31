@@ -12,3 +12,4 @@ license-private-key*
 *.gguf
 *.onnx
 app/libs/*.aar
+app/src/main/cpp/llama.cpp/

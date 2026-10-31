@@ -167,9 +167,9 @@ fun ModelsScreen(vm: AppViewModel, onBack: () -> Unit) {
                         if (installed || vm.models.installedBytes(e) > 0) OutlinedButton(onClick = { vm.models.remove(e) }) { Text(stringResource(R.string.remove)) }
                     }
                     if (installed) {
-                        val active = when (e.kind) { ModelKind.ASR -> cfg.activeAsr == "sherpa-whisper-base"; ModelKind.LLM -> cfg.activeLlm == e.id; ModelKind.KWS -> cfg.activeKws == e.id; else -> false }
+                        val active = when (e.kind) { ModelKind.ASR -> cfg.activeAsr == e.id; ModelKind.LLM -> cfg.activeLlm == e.id; ModelKind.KWS -> cfg.activeKws == e.id; else -> false }
                         SwitchRow(stringResource(R.string.use) + " (" + stringResource(R.string.active) + ")", active) { on ->
-                            vm.update { when (e.kind) { ModelKind.ASR -> it.copy(activeAsr = if (on) "sherpa-whisper-base" else "android"); ModelKind.LLM -> it.copy(activeLlm = if (on) e.id else ""); ModelKind.KWS -> it.copy(activeKws = if (on) e.id else ""); else -> it } }
+                            vm.update { when (e.kind) { ModelKind.ASR -> it.copy(activeAsr = if (on) e.id else "android"); ModelKind.LLM -> it.copy(activeLlm = if (on) e.id else ""); ModelKind.KWS -> it.copy(activeKws = if (on) e.id else ""); else -> it } }
                         }
                     }
                     if (e.kind == ModelKind.LLM && !vm.llama.nativeLoaded) Text("⚠ ${vm.llama.unavailableReason}", color = Color(0xFFFFC857), style = MaterialTheme.typography.bodySmall)

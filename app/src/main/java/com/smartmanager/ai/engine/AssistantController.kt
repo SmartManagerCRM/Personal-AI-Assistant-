@@ -103,6 +103,8 @@ class AssistantController @Inject constructor(
             try {
                 if (!licenseOk()) { _ui.update { it.copy(message = "License required") }; return@launch }
                 if (!perms.isGranted(com.smartmanager.ai.core.action.AppPermission.MICROPHONE)) { _ui.update { it.copy(message = "Microphone permission missing") }; return@launch }
+                voice.unavailableReason()?.let { r -> _ui.update { it.copy(message = r) }; return@launch }
+                _ui.update { it.copy(message = "") }
                 wake.stopListening()
                 SmartVoiceInteractionService.instance?.showSessionSafely()
                 engine.runSession(greet)

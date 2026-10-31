@@ -7,11 +7,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 
 @Composable
-fun AppNav(onStartStandby: () -> Unit) {
+fun AppNav(onStartStandby: () -> Unit, onTalk: () -> Unit) {
     val nav = rememberNavController()
     val vm: AppViewModel = hiltViewModel()
     NavHost(nav, startDestination = "main") {
-        composable("main") { MainScreen(vm, onSettings = { nav.navigate("settings") }, onStartStandby = onStartStandby) }
+        composable("main") { MainScreen(vm, onSettings = { nav.navigate("settings") }, onStartStandby = onStartStandby, onTalk = onTalk) }
         composable("settings") { SettingsHub(onBack = { nav.popBackStack() }, onOpen = { nav.navigate(it) }) }
         composable("voice") { VoiceScreen(vm) { nav.popBackStack() } }
         composable("wake") { WakeScreen(vm, onStartStandby, onModels = { nav.navigate("models") }) { nav.popBackStack() } }

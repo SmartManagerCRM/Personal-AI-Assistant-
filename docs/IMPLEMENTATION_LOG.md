@@ -1,0 +1,11 @@
+# Implementation log (chronological, abridged)
+
+1. **Environment**: empty repo; JDK 21, Gradle 8.14 present; Android SDK 35, build-tools 35, NDK 27.2, CMake 3.22 installed from dl.google.com. Maven Central rate-limited (HTTP 429) → dependencies resolved through Google Maven + the Google-hosted Maven Central mirror. GitHub blocked → sherpa-onnx AAR taken from the Hugging Face mirror (SHA-256 pinned), llama.cpp sources from the PyPI sdist (SHA-256 pinned).
+2. **Core module** written first (language, intents, policy, engine) so it is testable on the JVM. 135-sentence benchmark first run 113/134; fixed multi-word lexicon matching, "علي"-as-preposition, embedded pronouns (قلّو/9olou), name boundaries, hour parsing, language-detection markers; one expectation corrected (documented in TEST_RESULTS).
+3. **Wake word**: icefall "bpe" models are unigram SentencePiece models; a merge-based encoder was wrong ("▁WORLD"), replaced by a Viterbi encoder that matches the reference `sentencepiece` on 9 phrases → custom phrases work on-device.
+4. **Licensing**: ECDSA P-256 (Ed25519 is not available on API 26); issue/verify/tamper/wrong-device/expiry/clock-rollback tests.
+5. **Android app**: manifest (voice interaction, mic FGS, queries), services, UI, actions, model manager with hash verification. First compile errors were trivial (enum alias, `Result<Unit>`); no refactoring needed.
+6. **Native LLM**: JNI bridge against this llama.cpp version's API (`llama_model_params` has no `use_mmap` any more); built for arm64 (+ stub for armv7). Host twin built to validate with the real Qwen3 model: first prompt 12/20 (model echoed Derja), few-shot prompt over-triggered actions on questions, balanced prompt 17/20; added repetition penalty after an observed repetition loop; parser repairs truncated JSON and never speaks raw JSON.
+7. **Review fixes**: orb tap requested no mic permission; silent timeout when no recognizer exists → message; WorkManager default initializer removed so the Hilt factory is used; PromptBuilder moved to `:core`.
+8. **ASR research**: found TuniSpeech is CC-BY-NC (excluded) and OpenVoiceOS ONNX is not sherpa-compatible; generalised the Whisper loader and added the sherpa-layout dialectal model as experimental.
+9. Release APK built with R8, signed (v2); docs written. **No device testing was possible.**

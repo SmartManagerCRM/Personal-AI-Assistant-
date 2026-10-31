@@ -1,0 +1,3 @@
+/home/user/Personal-AI-Assistant-/app/.cxx/Debug/6o1ub54j/armeabi-v7a/CMakeFiles/smartllama.dir
+/home/user/Personal-AI-Assistant-/app/.cxx/Debug/6o1ub54j/armeabi-v7a/CMakeFiles/edit_cache.dir
+/home/user/Personal-AI-Assistant-/app/.cxx/Debug/6o1ub54j/armeabi-v7a/CMakeFiles/rebuild_cache.dir

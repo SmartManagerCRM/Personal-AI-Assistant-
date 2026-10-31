@@ -48,6 +48,11 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true; buildConfig = true }
     packaging { jniLibs { useLegacyPackaging = true } }
+    // Local LLM runtime: compiled only when the llama.cpp sources were fetched (scripts/fetch-llama-cpp.sh).
+    if (file("src/main/cpp/llama.cpp/CMakeLists.txt").exists()) {
+        externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
+        ndkVersion = "27.2.12479018"
+    }
     lint { abortOnError = false }
     testOptions { unitTests.isReturnDefaultValues = true }
 }

@@ -28,7 +28,7 @@ import com.smartmanager.ai.R
 import com.smartmanager.ai.core.conversation.ConvState
 
 @Composable
-fun MainScreen(vm: AppViewModel, onSettings: () -> Unit, onStartStandby: () -> Unit) {
+fun MainScreen(vm: AppViewModel, onSettings: () -> Unit, onStartStandby: () -> Unit, onTalk: () -> Unit) {
     val ui by vm.ui.collectAsStateWithLifecycle(); val cfg by vm.cfg.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     LaunchedEffect(ui.transcript.size) { if (ui.transcript.isNotEmpty()) listState.animateScrollToItem(ui.transcript.size - 1) }
@@ -43,7 +43,7 @@ fun MainScreen(vm: AppViewModel, onSettings: () -> Unit, onStartStandby: () -> U
             IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, stringResource(R.string.settings)) }
         }
         Spacer(Modifier.height(8.dp))
-        Box(Modifier.clickable { vm.controller.talk().also { if (!ui.standby) {} } }) { Orb(ui.conv, ui.micOn) }
+        Box(Modifier.clickable { onTalk() }) { Orb(ui.conv, ui.micOn) }
         Text(stringResource(statusRes), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
         if (ui.message.isNotBlank()) Text(ui.message, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
         else Text(stringResource(R.string.main_hint, cfg.wakePhrase), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
@@ -66,7 +66,7 @@ fun MainScreen(vm: AppViewModel, onSettings: () -> Unit, onStartStandby: () -> U
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             if (ui.standby) FilledTonalButton(onClick = { vm.controller.emergencyStop("") }, Modifier.weight(1f), colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color(0xFF5A1F2A))) { Icon(Icons.Filled.PowerSettingsNew, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.emergency_stop)) }
             else Button(onClick = onStartStandby, Modifier.weight(1f)) { Icon(Icons.Filled.Hearing, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.start_standby)) }
-            FilledIconButton(onClick = { vm.controller.talk() }, Modifier.size(52.dp)) { Icon(Icons.Filled.Mic, null) }
+            FilledIconButton(onClick = onTalk, Modifier.size(52.dp)) { Icon(Icons.Filled.Mic, null) }
         }
     }
 }

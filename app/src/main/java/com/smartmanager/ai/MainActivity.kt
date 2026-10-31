@@ -9,13 +9,19 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import com.smartmanager.ai.actions.AppVisibility
+import com.smartmanager.ai.engine.AssistantController
 import com.smartmanager.ai.engine.AssistantService
+import javax.inject.Inject
 import com.smartmanager.ai.ui.AppNav
 import com.smartmanager.ai.ui.SmartTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var controller: AssistantController
+    private val micThenTalk = registerForActivityResult(ActivityResultContracts.RequestPermission()) { if (it) controller.talk() }
+    private fun talkWithPermission() { if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) controller.talk() else micThenTalk.launch(Manifest.permission.RECORD_AUDIO) }
+
     private val micThenStart = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
         if (r[Manifest.permission.RECORD_AUDIO] == true) AssistantService.start(this)
     }
@@ -23,7 +29,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { SmartTheme { AppNav(onStartStandby = { startStandby() }) } }
+        setContent { SmartTheme { AppNav(onStartStandby = { startStandby() }, onTalk = { talkWithPermission() }) } }
         handle(intent)
     }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); handle(intent) }

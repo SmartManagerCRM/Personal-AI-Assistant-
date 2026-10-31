@@ -24,17 +24,6 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
-object PromptBuilder {
-    fun system(lang: Lang, allowed: Set<ActionName>): String {
-        val reply = when (lang) { Lang.TUNISIAN, Lang.MIXED_TN_FR -> "Tunisian Arabic (Derja) in Arabic script, keeping French words the user used"; Lang.MSA -> "Modern Standard Arabic"; Lang.FRENCH -> "French"; else -> "English" }
-        val tools = allowed.filter { it !in setOf(ActionName.UNKNOWN, ActionName.CONFIRM_YES, ActionName.CONFIRM_NO, ActionName.GREETING) }.joinToString(", ") { it.name }
-        return """You are Smart, a private voice assistant running on the user's phone. Reply in $reply, in at most two short spoken sentences, no markdown, no emojis.
-If the user wants a phone operation, answer ONLY with one JSON object: {"action":"<NAME>","slots":{...},"say":"<short spoken sentence>"}.
-Allowed actions: $tools. Slots: contact, body, app, camera(front|rear), what, minutes, dayOffset, hour, minute, direction(up|down|mute|set), level, panel(wifi|bluetooth|brightness|main), day(today|tomorrow).
-Never invent contacts, numbers or facts. Never perform payments, transfers or account changes. If you do not know, say so briefly. /no_think"""
-    }
-}
-
 /** Local brain: Qwen3 via llama.cpp (JNI). Reports itself unavailable until both the GGUF model and the native library are present. */
 @Singleton
 class LlamaCppProvider @Inject constructor(private val models: ModelManager) : AIProvider {
@@ -63,7 +52,7 @@ class LlamaCppProvider @Inject constructor(private val models: ModelManager) : A
             request.history.takeLast(6).forEach { prompt.append("<|im_start|>${if (it.role == ChatMessage.Role.USER) "user" else "assistant"}\n${it.content}<|im_end|>\n") }
             prompt.append("<|im_start|>user\n${request.userText}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n")
             val t0 = System.nanoTime()
-            val out = NativeLlama.generate(handle, prompt.toString(), request.maxTokens, 0.4f)
+            val out = NativeLlama.generateText(handle, prompt.toString(), request.maxTokens, 0.4f)
             val secs = (System.nanoTime() - t0) / 1e9; lastTokensPerSecond = if (secs > 0) (out.length / 3.5) / secs else 0.0
             StructuredOutput.parse(out, request.allowedActions)
         } catch (e: Throwable) { AiResponse.Unavailable(e.message ?: "llama error") }
@@ -73,9 +62,15 @@ class LlamaCppProvider @Inject constructor(private val models: ModelManager) : A
 
 /** JNI bridge (libsmartllama.so, built from llama.cpp when the sources are present — see docs/MODEL_INSTALL.md). */
 object NativeLlama {
-    val available: Boolean = try { System.loadLibrary("smartllama"); true } catch (_: Throwable) { false }
+    /** arm64 with dot-product instructions only (the library is built for armv8.2-a+dotprod); anything else → local LLM unavailable, never a crash. */
+    val available: Boolean = try {
+        val arm64 = android.os.Build.SUPPORTED_ABIS.firstOrNull() == "arm64-v8a"
+        val dotprod = arm64 && File("/proc/cpuinfo").readLines().any { it.startsWith("Features") && it.split(' ', '\t', ':').contains("asimddp") }
+        if (dotprod) { System.loadLibrary("smartllama"); true } else false
+    } catch (_: Throwable) { false }
     external fun load(path: String, nCtx: Int, threads: Int): Long
-    external fun generate(handle: Long, prompt: String, maxTokens: Int, temperature: Float): String
+    private external fun generate(handle: Long, prompt: String, maxTokens: Int, temperature: Float): ByteArray
+    fun generateText(handle: Long, prompt: String, maxTokens: Int, temperature: Float): String = String(generate(handle, prompt, maxTokens, temperature), Charsets.UTF_8)
     external fun free(handle: Long)
 }
 

@@ -31,10 +31,22 @@ class VoiceInput @Inject constructor(
     @Volatile var hint: () -> Lang = { Lang.TUNISIAN }
     @Volatile var lastUsedEngine: String = ""; private set
 
+    /** activeAsr holds a catalog id ("android" = system recognizer). Returns true when that sherpa model is installed and now selected. */
+    private fun selectWhisper(active: String): Boolean {
+        if (active == "android" || com.smartmanager.ai.models.ModelCatalog.byId(active)?.kind != com.smartmanager.ai.models.ModelKind.ASR) return false
+        whisper.selectedId = active
+        return whisper.isAvailable()
+    }
+
+    /** Null when speech recognition can work, otherwise a human-readable reason shown in the UI. */
+    suspend fun unavailableReason(): String? {
+        val s = settings.data.first()
+        return if (selectWhisper(s.activeAsr) || android.isAvailable()) null else "No speech recognizer: install the Whisper model (Settings → AI models) or an on-device Android speech service"
+    }
+
     override suspend fun listen(timeoutMs: Long): String? {
         val s = settings.data.first()
-        val useWhisper = (s.activeAsr == whisper.id || s.activeAsr == "auto") && whisper.isAvailable()
-        return if (useWhisper) listenWhisper(timeoutMs) else listenAndroid(timeoutMs)
+        return if (selectWhisper(s.activeAsr)) listenWhisper(timeoutMs) else listenAndroid(timeoutMs)
     }
 
     private suspend fun listenWhisper(timeoutMs: Long): String? {

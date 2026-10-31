@@ -12,8 +12,13 @@ import com.smartmanager.ai.core.intent.ParsedIntent
 object StructuredOutput {
     fun parse(output: String, allowed: Set<ActionName>): AiResponse {
         val start = output.indexOf('{'); val end = output.lastIndexOf('}')
-        if (start < 0 || end <= start) return AiResponse.Text(output.trim())
-        val obj = try { MiniJson(output.substring(start, end + 1)).parseObject() } catch (e: Exception) { return AiResponse.Text(output.trim()) }
+        if (start < 0) return AiResponse.Text(output.trim())
+        val candidates = buildList { if (end > start) add(output.substring(start, end + 1)); add(repair(output.substring(start))) }
+        val obj = candidates.firstNotNullOfOrNull { c -> try { MiniJson(c).parseObject() } catch (e: Exception) { null } } ?: run {
+            // Truncated / malformed JSON must never be spoken aloud: salvage the "say" sentence if present, otherwise stay silent.
+            val say = Regex("\"say\"\\s*:\\s*\"([^\"]*)").find(output)?.groupValues?.get(1)
+            return AiResponse.Text(if (output.trimStart().startsWith("{")) say.orEmpty() else output.trim())
+        }
         val actionStr = obj["action"] as? String ?: return AiResponse.Text(output.trim())
         val action = ActionName.entries.firstOrNull { it.name == actionStr } ?: return AiResponse.Text((obj["say"] as? String) ?: "")
         if (action !in allowed) return AiResponse.Text((obj["say"] as? String) ?: "")
@@ -21,6 +26,16 @@ object StructuredOutput {
         val slots = (obj["slots"] as? Map<String, Any?>)?.mapNotNull { (k, v) -> (v as? String ?: (v as? Number)?.toString())?.let { k to it } }?.toMap() ?: emptyMap()
         return AiResponse.Action(ParsedIntent(action, slots, emptyList(), 0.6), obj["say"] as? String)
     }
+}
+
+/** Closes an unterminated string / object / array produced by a truncated generation. */
+private fun repair(partial: String): String {
+    val sb = StringBuilder(partial.trimEnd()); var inStr = false; var esc = false; val stack = ArrayDeque<Char>()
+    for (c in sb) { if (esc) { esc = false; continue }; if (c == '\\') { esc = true; continue }; if (c == '"') inStr = !inStr
+        if (!inStr) when (c) { '{' -> stack.addLast('}'); '[' -> stack.addLast(']'); '}', ']' -> if (stack.isNotEmpty()) stack.removeLast() } }
+    if (inStr) sb.append('"')
+    while (stack.isNotEmpty()) sb.append(stack.removeLast())
+    return sb.toString()
 }
 
 /** Minimal JSON reader (objects, strings, numbers, booleans, null, arrays) — avoids a library dependency in core. */

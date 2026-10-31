@@ -1,0 +1,68 @@
+Qwen3-1.7B Q4_K_M via llama.cpp (llama-cpp-python 0.3.36 vendored sources), JNI bridge compiled for x86_64 Linux host, 4 CPU cores, n_ctx=4096, temp 0.4 — NOT a phone measurement.
+Production PromptBuilder + StructuredOutput parser. Two identical runs (outputs deterministic).
+
+LOAD ms=967 handle=true
+[PASS] (3.8s) text-ar
+   in : شنوة رأيك في الطقس اليوم؟
+   out: TEXT أنا أرى الطقس جيدًا.
+[PASS] (4.1s) text-ar
+   in : كيفاش نعمل كسكسي؟
+   out: TEXT نعمل كسكسي بكتابة مقالات وتحديثات.
+[FAIL] (3.6s) text-ar
+   in : علاش السما زرقاء؟
+   out: TEXT السما زرقاء.
+[FAIL] (4.1s) text-ar
+   in : شكون اكتشف أمريكا؟
+   out: TEXT أكتشف أمريكا في 1492.
+[PASS] (3.9s) text-ar
+   in : chnowa el far9 bin el wifi w el 4G?
+   out: TEXT الواي فاي في 4G؟
+[PASS] (3.8s) text-ar
+   in : ما هي عاصمة تونس؟
+   out: TEXT عاصمة تونس هي طرابلس.
+[PASS] (5.5s) text-latin
+   in : raconte-moi une blague courte
+   out: TEXT Un homme arrive chez le médecin et dit : "J'ai mal au dos." Le médecin regarde sa montre et répond : "Il faut que tu te déshydrate."
+[PASS] (3.3s) text-latin
+   in : what is the capital of Australia?
+   out: TEXT The capital of Australia is Canberra.
+[PASS] (3.6s) no-invention
+   in : what's my mother's phone number?
+   out: TEXT I don't have access to your personal information, including phone numbers.
+[PASS] (4.2s) no-action
+   in : حوّلّي 100 دينار لأحمد
+   out: TEXT I can't make payments or transfers; please do it yourself in your banking app.
+[PASS] (4.6s) action
+   in : نحب نكلم سمير
+   out: ACTION CALL_CONTACT {contact=سمير} say=باهي، نعيّطلو
+[PASS] (5.8s) action
+   in : ابعث لماما بلي باش نتأخر ساعة
+   out: ACTION SEND_MESSAGE {contact=ماما, body=باش نتأخر ساعة} say=باهي، نحضّرلك الميساج
+[PASS] (4.8s) action
+   in : mets-moi un rappel dans 15 minutes pour sortir le pain
+   out: ACTION SET_REMINDER {what=sortir le pain, minutes=15} say=D'accord
+[PASS] (4.1s) action
+   in : turn the sound down a bit
+   out: ACTION SET_VOLUME {direction=down} say=Okay
+[PASS] (4.6s) action
+   in : نحب نصور روحي
+   out: ACTION TAKE_PHOTO {camera=front} say=باهي، نصور روحي
+[PASS] (4.0s) action
+   in : open my chat app WhatsApp
+   out: ACTION OPEN_APP {app=WhatsApp} say=Okay
+[PASS] (4.6s) action
+   in : ماذا لدي من مواعيد غدا؟
+   out: ACTION READ_AGENDA {day=tomorrow} say=لحظة، سأتحقق
+[PASS] (4.3s) action
+   in : أريد أن أتصل بصديقي كريم
+   out: ACTION CALL_CONTACT {contact=كريم} say=باهي، نعيّطلو
+[PASS] (5.2s) action
+   in : rappelle-moi demain à 8h d'appeler le médecin
+   out: ACTION SET_REMINDER {what=appeler le médecin, dayOffset=1, hour=8, minute=0} say=D'accord
+[FAIL] (5.3s) multi-step (model returns first step)
+   in : عيط لأحمد وابعثلو مساج
+   out: ACTION SEND_MESSAGE {contact=أحمد, body=ابعثلو مساج} say=باهي، نحضّرلك الميساج
+LLM HOST VALIDATION: 17/20 passed; total 87.2s; ~14.7 chars/s
+
+--- run 2 summary ---
+LLM HOST VALIDATION: 17/20 passed; total 83.9s; ~15.3 chars/s

@@ -42,6 +42,16 @@ object ModelCatalog {
             "MIT (OpenAI Whisper weights)", "Yes", "Multilingual (99 languages); Arabic = MSA-biased", "sherpa-onnx", 450,
         ),
         ModelEntry(
+            "asr-whisper-large-v3-turbo-ar-dialectal-int8", ModelKind.ASR, "Speech recognition — Whisper large-v3-turbo, Arabic dialectal v2 (INT8) — EXPERIMENTAL",
+            "Fine-tuned on dialect-balanced Arabic (Tunisian included). 1.1 GB and slow on phones: not benchmarked on the Infinix X6856 yet. Same sherpa-onnx Whisper layout, so it can be selected instead of Whisper Base.",
+            listOf(
+                ModelFile("encoder.int8.onnx", "$HF/dmouayad/sherpa-onnx-whisper-large-v3-turbo-arabic-dialectal-v2/resolve/main/encoder.int8.onnx", 658_404_860, "b3343d6dca7544bb116f19f1fdef241891c0e158a5cb0fb413129cdf13e81ed1"),
+                ModelFile("decoder.int8.onnx", "$HF/dmouayad/sherpa-onnx-whisper-large-v3-turbo-arabic-dialectal-v2/resolve/main/decoder.int8.onnx", 427_459_733, "f526295ad1dcc54cf869ea8c6ec26918d3e2d36cdee431824a8b9efe09cf45ab"),
+                ModelFile("tokens.txt", "$HF/dmouayad/sherpa-onnx-whisper-large-v3-turbo-arabic-dialectal-v2/resolve/main/tokens.txt", 816_730, "b34b360dbb493e781e479794586d661700670d65564001f23024971d1f2fa126"),
+            ),
+            "Apache-2.0 (repository tag; base: OpenAI Whisper MIT, fine-tune dataset lahgtna-v3-small — verify dataset terms before commercial release)", "Verify dataset terms", "Arabic dialects (Tunisian among 13); no FR/EN focus", "sherpa-onnx", 2500,
+        ),
+        ModelEntry(
             "llm-qwen3-1.7b-q4km", ModelKind.LLM, "Local brain — Qwen3 1.7B (Q4_K_M)",
             "Conversational model and tool-calling for requests the rules cannot handle. 1.1 GB. Requires the native llama.cpp runtime (see KNOWN_LIMITATIONS).",
             listOf(ModelFile("Qwen3-1.7B-Q4_K_M.gguf", "$HF/unsloth/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_K_M.gguf", 1_107_409_472, "b139949c5bd74937ad8ed8c8cf3d9ffb1e99c866c823204dc42c0d91fa181897")),

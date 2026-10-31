@@ -178,6 +178,13 @@ class EngineTest {
         assertTrue(StructuredOutput.parse("{broken", setOf(ActionName.SET_VOLUME)) is AiResponse.Text)
     }
 
+    @Test fun `truncated model json is repaired and raw json is never spoken`() {
+        val r = StructuredOutput.parse("""{"action":"TAKE_PHOTO","slots":{"camera":"front"},"say":"باهي، نصور روحي"""", setOf(ActionName.TAKE_PHOTO)) as AiResponse.Action
+        assertEquals("front", r.intent.slot("camera")); assertEquals("باهي، نصور روحي", r.say)
+        val broken = StructuredOutput.parse("""{"action": TAKE_PHOTO, "say":"hello""", setOf(ActionName.TAKE_PHOTO)) as AiResponse.Text
+        assertFalse(broken.text.contains("{")); assertEquals("hello", broken.text)
+    }
+
     @Test fun `time parser`() {
         fun p(s: String) = TimeParser.parse(TextNormalizer.tokenize(s))
         assertEquals(20, p("بعد عشرين دقيقة").relativeMinutes); assertEquals(30, p("بعد نص ساعة").relativeMinutes)
