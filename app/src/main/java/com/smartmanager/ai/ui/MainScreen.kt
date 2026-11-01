@@ -29,7 +29,7 @@ import com.smartmanager.ai.core.conversation.ConvState
 
 @Composable
 fun MainScreen(vm: AppViewModel, onSettings: () -> Unit, onStartStandby: () -> Unit, onTalk: () -> Unit) {
-    val ui by vm.ui.collectAsStateWithLifecycle(); val cfg by vm.cfg.collectAsStateWithLifecycle()
+    val ui by vm.ui.collectAsStateWithLifecycle(); val cfg by vm.cfg.collectAsStateWithLifecycle(); val perf by vm.perfStats.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     LaunchedEffect(ui.transcript.size) { if (ui.transcript.isNotEmpty()) listState.animateScrollToItem(ui.transcript.size - 1) }
     var typed by remember { mutableStateOf("") }
@@ -47,6 +47,9 @@ fun MainScreen(vm: AppViewModel, onSettings: () -> Unit, onStartStandby: () -> U
         Text(stringResource(statusRes), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
         if (ui.message.isNotBlank()) Text(ui.message, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium)
         else Text(stringResource(R.string.main_hint, cfg.wakePhrase), color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+        if (perf.asrEngine.isNotBlank() || perf.lastError.isNotBlank()) Text(
+            buildString { if (perf.asrEngine.isNotBlank()) append("ASR ${perf.asrEngine.removePrefix("asr-").take(24)} ${perf.asrLastMs} ms"); if (perf.replyMs >= 0) append(" · reply ${perf.replyMs} ms"); if (perf.lastDetectedLang.isNotBlank()) append(" · lang ${perf.lastDetectedLang}"); if (perf.lastError.isNotBlank()) append("\n⚠ ${perf.lastError}") },
+            color = Color.Gray, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
         if (ui.providerLabel.isNotBlank()) Text(ui.providerLabel, color = Color.Gray, style = MaterialTheme.typography.labelSmall)
         Spacer(Modifier.height(8.dp))
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listState, verticalArrangement = Arrangement.spacedBy(6.dp)) {

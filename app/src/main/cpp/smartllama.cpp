@@ -13,7 +13,7 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
 namespace {
-struct Handle { llama_model *model = nullptr; llama_context *ctx = nullptr; const llama_vocab *vocab = nullptr; int nCtx = 0; int nBatch = 512; };
+struct Handle { std::vector<llama_token> cached; llama_model *model = nullptr; llama_context *ctx = nullptr; const llama_vocab *vocab = nullptr; int nCtx = 0; int nBatch = 512; };
 bool g_backend = false;
 }
 
@@ -56,12 +56,21 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_com_smartmanager_ai_ai_NativeLlama_
     const int room = h->nCtx - maxTokens - 8;
     if (n > room && room > 0) { toks.erase(toks.begin(), toks.begin() + (n - room)); n = room; }   // keep the most recent context
 
-    llama_memory_clear(llama_get_memory(h->ctx), true);
-    for (int i = 0; i < n; i += h->nBatch) {
+    // Prefix caching: the system prompt + few-shot examples are identical between turns, so keep their KV entries and only decode the new tail.
+    auto t0 = std::chrono::steady_clock::now();
+    llama_memory_t mem = llama_get_memory(h->ctx);
+    size_t common = 0;
+    while (common < h->cached.size() && common < toks.size() && h->cached[common] == toks[common]) common++;
+    if (common >= toks.size()) common = toks.size() - 1;          // always decode at least one token to get fresh logits
+    if (common == 0 || !llama_memory_seq_rm(mem, 0, (llama_pos) common, -1)) { llama_memory_clear(mem, true); common = 0; }
+    h->cached.assign(toks.begin(), toks.begin() + common);
+    for (int i = (int) common; i < n; i += h->nBatch) {
         int cnt = std::min(h->nBatch, n - i);
         llama_batch b = llama_batch_get_one(toks.data() + i, cnt);
-        if (llama_decode(h->ctx, b) != 0) { LOGE("prompt decode failed"); return finish(); }
+        if (llama_decode(h->ctx, b) != 0) { LOGE("prompt decode failed"); h->cached.clear(); return finish(); }
+        h->cached.insert(h->cached.end(), toks.begin() + i, toks.begin() + i + cnt);
     }
+    auto t1 = std::chrono::steady_clock::now();
 
     llama_sampler *smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
     llama_sampler_chain_add(smpl, llama_sampler_init_penalties(llama_vocab_n_tokens(h->vocab), 64, 1.15f, 0.0f, 0.0f));   // stops repetition loops
@@ -77,8 +86,12 @@ extern "C" JNIEXPORT jbyteArray JNICALL Java_com_smartmanager_ai_ai_NativeLlama_
         int len = llama_token_to_piece(h->vocab, t, piece, sizeof(piece), 0, false);
         if (len > 0) out.append(piece, len);
         llama_batch b = llama_batch_get_one(&t, 1);
-        if (llama_decode(h->ctx, b) != 0) { LOGE("decode failed"); break; }
+        if (llama_decode(h->ctx, b) != 0) { LOGE("decode failed"); h->cached.clear(); break; }
+        h->cached.push_back(t);
     }
+    auto t2 = std::chrono::steady_clock::now();
+    LOGI("prompt=%d tokens (reused %zu) prefill=%lld ms, generation=%lld ms, out=%zu bytes", n, common,
+         (long long) std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count(), (long long) std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count(), out.size());
     llama_sampler_free(smpl);
     return finish();
 }

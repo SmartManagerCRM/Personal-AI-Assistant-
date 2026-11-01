@@ -13,7 +13,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
 
-data class PerfSnapshot(val asrLastMs: Long = -1, val asrAvgMs: Long = -1, val asrEngine: String = "", val whisperLoadMs: Long = -1, val lastDetectedLang: String = "", val utterances: Int = 0, val llmTokPerSec: Double = 0.0)
+data class PerfSnapshot(val asrLastMs: Long = -1, val asrAvgMs: Long = -1, val asrEngine: String = "", val whisperLoadMs: Long = -1, val lastDetectedLang: String = "", val utterances: Int = 0, val llmTokPerSec: Double = 0.0, val replyMs: Long = -1, val lastTranscript: String = "", val lastError: String = "")
 
 @Singleton
 class PerfStats @Inject constructor() {
@@ -21,6 +21,9 @@ class PerfStats @Inject constructor() {
     private val lat = ArrayDeque<Long>()
     fun asr(r: AsrResult, loadMs: Long) { lat.addLast(r.latencyMs); if (lat.size > 20) lat.removeFirst(); _s.update { it.copy(asrLastMs = r.latencyMs, asrAvgMs = lat.average().toLong(), asrEngine = r.engine, whisperLoadMs = loadMs, lastDetectedLang = r.language.orEmpty(), utterances = it.utterances + 1) } }
     fun llm(tps: Double) = _s.update { it.copy(llmTokPerSec = tps) }
+    fun reply(ms: Long) = _s.update { it.copy(replyMs = ms) }
+    fun transcript(t: String) = _s.update { it.copy(lastTranscript = t, lastError = "") }
+    fun error(e: String?) = _s.update { it.copy(lastError = e.orEmpty()) }
 }
 
 /** Speech input: Whisper (offline, shares the microphone hub with VAD) when installed and selected; otherwise Android's recognizer. */
@@ -46,7 +49,7 @@ class VoiceInput @Inject constructor(
 
     override suspend fun listen(timeoutMs: Long): String? {
         val s = settings.data.first()
-        return if (selectWhisper(s.activeAsr)) listenWhisper(timeoutMs) else listenAndroid(timeoutMs)
+        return if (selectWhisper(s.activeAsr)) listenWhisper(timeoutMs) else listenAndroid(timeoutMs, preferOffline = !(s.networkAllowed && s.hybridMode))
     }
 
     private suspend fun listenWhisper(timeoutMs: Long): String? {
@@ -58,15 +61,19 @@ class VoiceInput @Inject constructor(
         val got = try { withTimeoutOrNull(timeoutMs + 20_000) { done.await() } ?: false } finally { mic.remove(consumer) }
         if (!got) return null
         val r = whisper.transcribe(collector.samples(), MicHub.SAMPLE_RATE) ?: return null
-        lastUsedEngine = r.engine; perf.asr(r, whisper.lastLoadMs)
+        lastUsedEngine = r.engine; perf.asr(r, whisper.lastLoadMs); perf.transcript(r.text)
         return r.text.takeIf { it.isNotBlank() && !isHallucination(it) }
     }
 
-    private suspend fun listenAndroid(timeoutMs: Long): String? {
+    /** Warms the selected offline model while the greeting plays. */
+    suspend fun warmUp() { val s = settings.data.first(); if (selectWhisper(s.activeAsr)) runCatching { whisper.warmUp() } }
+    val lastError: String? get() = android.lastError
+
+    private suspend fun listenAndroid(timeoutMs: Long, preferOffline: Boolean): String? {
         if (!android.isAvailable()) return null
         mic.stop()                                 // SpeechRecognizer needs exclusive microphone access
-        val r = android.listen(timeoutMs, hint()) ?: return null
-        lastUsedEngine = r.engine; perf.asr(r, -1)
+        val r = android.listen(timeoutMs, hint(), preferOffline) ?: run { perf.error(android.lastError); return null }
+        lastUsedEngine = r.engine; perf.asr(r, -1); perf.transcript(r.text)
         return r.text.takeIf { it.isNotBlank() }
     }
 

@@ -34,7 +34,7 @@ data class SystemInfo(val ramFreeMb: Long, val ramTotalMb: Long, val appPssMb: L
 @HiltViewModel
 class AppViewModel @Inject constructor(
     app: Application, val controller: AssistantController, val settings: SettingsStore, val wake: WakeWordManager, val models: ModelManager, val perms: PermissionManager,
-    val memory: MemoryRepository, val db: AppDatabase, val tts: AndroidTts, val license: LicenseManager, val perf: PerfStats, val llama: LlamaCppProvider, val openai: OpenAiCompatibleProvider,
+    val memory: MemoryRepository, val db: AppDatabase, val tts: AndroidTts, val license: LicenseManager, val perf: PerfStats, val mic: com.smartmanager.ai.audio.MicHub, val llama: LlamaCppProvider, val openai: OpenAiCompatibleProvider,
 ) : AndroidViewModel(app) {
     val ui = controller.ui
     val cfg = settings.data.stateIn(viewModelScope, SharingStarted.Eagerly, Settings())

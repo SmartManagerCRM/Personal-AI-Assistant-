@@ -45,7 +45,12 @@ class ConversationEngine(
     private val onShutdown: () -> Unit = {},
     private val onQuiet: (minutes: Int) -> Unit = {},
     private val onLanguagePreference: (Lang) -> Unit = {},
+    /** Time from "transcript received" to "assistant starts speaking" (parsing, LLM, action). */
+    private val onReplyLatency: (Long) -> Unit = {},
 ) {
+    fun allowedActions() = registry.registered().toSet()
+    private var handleStart = 0L
+    private var replyReported = true
     val machine = ConversationStateMachine()
     val state: StateFlow<ConvState> get() = machine.state
     private val _transcript = MutableSharedFlow<TranscriptLine>(extraBufferCapacity = 64)
@@ -93,6 +98,7 @@ class ConversationEngine(
 
     /** Feeds one utterance (used by tests and by the text field on the main screen). */
     suspend fun handle(text: String) {
+        handleStart = now(); replyReported = false
         machine.transition(ConvState.PROCESSING)
         val u = processor.process(text, lastDetected)
         if (u.language != Lang.UNKNOWN) lastDetected = if (u.language == Lang.MIXED_TN_FR) Lang.TUNISIAN else u.language
@@ -274,6 +280,7 @@ class ConversationEngine(
 
     private suspend fun sayRaw(text: String, lang: Lang) {
         if (text.isBlank()) return
+        if (!replyReported) { replyReported = true; onReplyLatency(now() - handleStart) }
         machine.transition(ConvState.SPEAKING)
         _transcript.tryEmit(TranscriptLine(false, text, lang, now()))
         if (history.lastOrNull()?.role != ChatMessage.Role.ASSISTANT || history.lastOrNull()?.content != text) {

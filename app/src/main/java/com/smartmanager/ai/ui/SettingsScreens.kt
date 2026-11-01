@@ -108,6 +108,13 @@ fun WakeScreen(vm: AppViewModel, onStartStandby: () -> Unit, onModels: () -> Uni
             Muted("Higher = catches more, but more false activations. Applies next time listening starts.")
         } }
         item { CardBox {
+            var lvl by remember { mutableStateOf(0.0) }; var pk by remember { mutableStateOf(0) }
+            LaunchedEffect(ui.micOn) { while (true) { lvl = vm.mic.level; pk = vm.mic.peak; kotlinx.coroutines.delay(150) } }
+            Text("Microphone level (say something): RMS ${lvl.toInt()} · peak $pk")
+            LinearProgressIndicator(progress = { (lvl / 4000.0).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth())
+            Muted(if (!ui.micOn) "Microphone is off — start listening first." else if (pk in 1..2500) "Peak stays under ~2500 when you speak normally: the phone's microphone gain is low, which hurts wake word and speech recognition. Speak closer or tell me these numbers." else "Level looks healthy.")
+        } }
+        item { CardBox {
             Text("Engine: ${m.engine} — ${if (m.ready) "ready" else "not ready"}"); if (m.reason.isNotBlank()) Text(m.reason, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             Text("Detections: ${m.detections} · suppressed: ${m.suppressed} · marked false: ${m.falsePositives}")
             Text("Latency (decode lag): last ${m.lastLatencyMs} ms · avg ${m.avgLatencyMs} ms")

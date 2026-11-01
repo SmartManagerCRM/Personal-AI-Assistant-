@@ -29,6 +29,9 @@ class MicHub @Inject constructor(@ApplicationContext private val ctx: Context) {
     private val _running = MutableStateFlow(false)
     val running: StateFlow<Boolean> = _running
     @Volatile var lastError: String? = null; private set
+    /** RMS (0..32767) of the latest 100 ms chunk — shown live in Settings → Wake word to diagnose low microphone gain. */
+    @Volatile var level = 0.0; private set
+    @Volatile var peak = 0; private set
 
     fun add(c: AudioConsumer) { consumers.add(c) }
     fun remove(c: AudioConsumer) { consumers.remove(c) }
@@ -53,7 +56,12 @@ class MicHub @Inject constructor(@ApplicationContext private val ctx: Context) {
             val buf = ShortArray(CHUNK)
             while (_running.value) {
                 val n = rec.read(buf, 0, buf.size)
-                if (n > 0) { val t = System.currentTimeMillis(); for (c in consumers) c.onAudio(buf, n, t) }
+                if (n > 0) {
+                    var sum = 0.0; var pk = 0
+                    for (i in 0 until n) { val v = buf[i].toInt(); sum += v.toDouble() * v; if (kotlin.math.abs(v) > pk) pk = kotlin.math.abs(v) }
+                    level = kotlin.math.sqrt(sum / n); peak = pk
+                    val t = System.currentTimeMillis(); for (c in consumers) c.onAudio(buf, n, t)
+                }
                 else if (n < 0) { lastError = "read error $n"; break }
             }
         }, "mic-hub").also { it.start() }

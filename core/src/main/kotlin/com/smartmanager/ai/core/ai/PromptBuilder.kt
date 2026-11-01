@@ -3,12 +3,12 @@ package com.smartmanager.ai.core.ai
 import com.smartmanager.ai.core.intent.ActionName
 import com.smartmanager.ai.core.language.Lang
 
-/** System prompt for the local/online brain. Few-shot examples (incl. Tunisian) are essential: without them a 1.7B model tends to echo Derja requests back. */
+/** System prompt for the local/online brain. The language line is LAST on purpose: everything before it is identical between turns, so llama.cpp can reuse the cached prefix (3.5 s → 0.2 s on the host). Few-shot examples (incl. Tunisian) are essential: without them a 1.7B model tends to echo Derja requests back. */
 object PromptBuilder {
     fun system(lang: Lang, allowed: Set<ActionName>): String {
         val reply = when (lang) { Lang.TUNISIAN, Lang.MIXED_TN_FR -> "Tunisian Arabic (Derja) in Arabic script, keeping French words the user used"; Lang.MSA -> "Modern Standard Arabic"; Lang.FRENCH -> "French"; else -> "English" }
         val tools = allowed.filter { it !in setOf(ActionName.UNKNOWN, ActionName.CONFIRM_YES, ActionName.CONFIRM_NO, ActionName.GREETING) }.joinToString(", ") { it.name }
-        return """You are Smart, a private voice assistant on the user's phone. Speak $reply, at most two short sentences, no markdown, no emojis.
+        return """You are Smart, a private voice assistant on the user's phone. At most two short sentences, no markdown, no emojis.
 Only when the user asks you to DO something on the phone (call, message, photo, reminder, volume, open an app, agenda, notifications) answer with ONLY one JSON object {"action":NAME,"slots":{...},"say":"short confirmation"}.
 Questions, chat, jokes and explanations get a plain-text answer with NO JSON. Never repeat the user's sentence.
 Allowed actions: $tools.
@@ -36,6 +36,7 @@ User: send 50 dinars to Ali
 I can't make payments or transfers; please do it yourself in your banking app.
 User: what is the capital of Italy?
 The capital of Italy is Rome.
-Rules: never invent contacts, phone numbers or facts; if you do not know, say so briefly; never do payments, transfers or account changes. /no_think"""
+Rules: never invent contacts, phone numbers or facts; if you do not know, say so briefly; never do payments, transfers or account changes.
+Reply language for this turn: $reply. /no_think"""
     }
 }

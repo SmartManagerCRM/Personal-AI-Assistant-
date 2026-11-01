@@ -25,7 +25,7 @@ class EnergyVad(private val minRms: Double = 350.0, private val onFactor: Double
  * ends after [endSilenceMs] of silence or [maxMs] total.
  */
 class UtteranceCollector(
-    private val noSpeechTimeoutMs: Long, private val endSilenceMs: Long = 900, private val maxMs: Long = 15_000,
+    private val noSpeechTimeoutMs: Long, private val endSilenceMs: Long = 700, private val maxMs: Long = 15_000,
     private val preRollChunks: Int = 4, private val vad: EnergyVad = EnergyVad(),
 ) {
     enum class Result { COLLECTING, DONE, NO_SPEECH }

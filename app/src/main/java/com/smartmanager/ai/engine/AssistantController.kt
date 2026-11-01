@@ -55,6 +55,7 @@ class AssistantController @Inject constructor(
             input = voice, output = tts, registry = registryFactory.create(), router = router, barge = barge,
             onShutdown = { emergencyStop("Stopped by voice command") }, onQuiet = { quiet(it) },
             onLanguagePreference = { l -> scope.launch { settings.update { it.copy(language = l.name) } } },
+            onReplyLatency = { perf.reply(it) },
         )
     }
 
@@ -107,7 +108,9 @@ class AssistantController @Inject constructor(
                 _ui.update { it.copy(message = "") }
                 wake.stopListening()
                 SmartVoiceInteractionService.instance?.showSessionSafely()
+                scope.launch { voice.warmUp(); llama.warmUp(engine.allowedActions()) }   // overlaps with the spoken greeting
                 engine.runSession(greet)
+                voice.lastError?.let { e -> _ui.update { it.copy(message = e) } }
             } catch (e: CancellationException) { throw e } catch (e: Throwable) { Log.e(TAG, "session failed", e); _ui.update { it.copy(message = e.message.orEmpty()) } }
             finally {
                 sessionLock.unlock()
@@ -147,5 +150,5 @@ class AssistantController @Inject constructor(
         scope.launch { settings.update { it.copy(standbyEnabled = false, quietUntilMs = 0) } }
     }
 
-    private companion object { const val TAG = "Assistant"; const val IDLE_UNLOAD_MS = 45_000L }
+    private companion object { const val TAG = "Assistant"; const val IDLE_UNLOAD_MS = 300_000L }
 }

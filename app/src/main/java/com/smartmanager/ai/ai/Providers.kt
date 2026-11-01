@@ -57,6 +57,11 @@ class LlamaCppProvider @Inject constructor(private val models: ModelManager) : A
             StructuredOutput.parse(out, request.allowedActions)
         } catch (e: Throwable) { AiResponse.Unavailable(e.message ?: "llama error") }
     }
+    /** Prefills the static system prompt so the first real question is fast. */
+    suspend fun warmUp(allowed: Set<ActionName>) = withContext(Dispatchers.Default) {
+        if (!isAvailable()) return@withContext
+        runCatching { ensureLoaded(); NativeLlama.generateText(handle, "<|im_start|>system\n${PromptBuilder.system(Lang.TUNISIAN, allowed)}<|im_end|>\n<|im_start|>user\n.<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n", 1, 0.1f) }
+    }
     @Synchronized override fun unload() { if (handle != 0L) { NativeLlama.free(handle); handle = 0 } }
 }
 

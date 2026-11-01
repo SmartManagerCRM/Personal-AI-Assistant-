@@ -25,7 +25,7 @@ data class AsrResult(val text: String, /** ISO code reported by the engine ("ar"
 /** Replaceable speech-recognition back ends. */
 interface AsrProvider { val id: String; val displayName: String; fun isAvailable(): Boolean; val note: String get() = "" }
 interface WaveformAsr : AsrProvider { suspend fun transcribe(samples: FloatArray, sampleRate: Int): AsrResult?; fun unload() }
-interface MicrophoneAsr : AsrProvider { suspend fun listen(timeoutMs: Long, hint: Lang): AsrResult? }
+interface MicrophoneAsr : AsrProvider { suspend fun listen(timeoutMs: Long, hint: Lang, preferOffline: Boolean = true): AsrResult? }
 
 /** Whisper (multilingual, INT8) through sherpa-onnx. Any ASR entry of the catalog that uses the sherpa Whisper layout can be selected. Language is auto-detected per utterance. Heavy → loaded on demand, released after idle. */
 @Singleton
@@ -68,6 +68,8 @@ class SherpaWhisperAsr @Inject constructor(private val models: ModelManager) : W
         )
         return OfflineRecognizer(config = cfg).also { lastLoadMs = System.currentTimeMillis() - t0 }
     }
+    /** Loads the recognizer ahead of the first utterance (called while the greeting is spoken). */
+    suspend fun warmUp() = withContext(Dispatchers.Default) { if (isAvailable()) synchronized(lock) { if (loadedId != selectedId) { rec?.release(); rec = null }; if (rec == null) { rec = load(); loadedId = selectedId } } }
     override fun unload() = synchronized(lock) { rec?.release(); rec = null; loadedId = null }
 }
 
@@ -78,8 +80,21 @@ class AndroidSpeechAsr @Inject constructor(@ApplicationContext private val ctx: 
     override fun isAvailable() = SpeechRecognizer.isRecognitionAvailable(ctx)
     override val note get() = "May use Google servers on devices without an offline language pack; the offline Whisper model avoids this."
     private val main = Handler(Looper.getMainLooper())
+    /** Human-readable reason the last call produced nothing (null = simply no speech). */
+    @Volatile var lastError: String? = null; private set
 
-    override suspend fun listen(timeoutMs: Long, hint: Lang): AsrResult? = withContext(Dispatchers.Main) {
+    private fun explain(code: Int, tag: String, offline: Boolean): String? = when (code) {
+        SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ->
+            "Speech recognizer has no ${if (offline) "OFFLINE " else ""}pack for $tag. Install it (Google app → Settings → Voice → Offline speech recognition) or enable Hybrid mode to let Google's recognizer use the network."
+        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission missing"
+        SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Recognizer needs the network for $tag (offline pack missing)"
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognizer busy — try again"
+        SpeechRecognizer.ERROR_AUDIO, SpeechRecognizer.ERROR_CLIENT, SpeechRecognizer.ERROR_SERVER, SpeechRecognizer.ERROR_SERVER_DISCONNECTED, SpeechRecognizer.ERROR_TOO_MANY_REQUESTS -> "Recognizer error $code"
+        else -> null   // NO_MATCH / SPEECH_TIMEOUT: nothing understood
+    }
+
+    override suspend fun listen(timeoutMs: Long, hint: Lang, preferOffline: Boolean): AsrResult? = withContext(Dispatchers.Main) {
+        lastError = null
         val t0 = System.currentTimeMillis()
         withTimeoutOrNull(timeoutMs + 12_000) {
             suspendCancellableCoroutine<AsrResult?> { cont ->
@@ -87,7 +102,7 @@ class AndroidSpeechAsr @Inject constructor(@ApplicationContext private val ctx: 
                 val tag = when (hint) { Lang.FRENCH -> "fr-FR"; Lang.ENGLISH -> "en-US"; Lang.MSA -> "ar"; else -> "ar-TN" }
                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, tag); putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, tag); putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, preferOffline)
                     putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                     putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1100L)
                     putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 900L)
@@ -96,7 +111,7 @@ class AndroidSpeechAsr @Inject constructor(@ApplicationContext private val ctx: 
                 fun finish(r: AsrResult?) { if (cont.isActive) cont.resume(r); runCatching { recognizer.destroy() } }
                 recognizer.setRecognitionListener(object : RecognitionListener {
                     override fun onResults(results: Bundle) { val t = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull(); finish(t?.let { AsrResult(it, tag.take(2), System.currentTimeMillis() - t0, id) }) }
-                    override fun onError(error: Int) = finish(null)
+                    override fun onError(error: Int) { lastError = explain(error, tag, preferOffline); finish(null) }
                     override fun onReadyForSpeech(p: Bundle?) {}; override fun onBeginningOfSpeech() {}; override fun onRmsChanged(r: Float) {}
                     override fun onBufferReceived(b: ByteArray?) {}; override fun onEndOfSpeech() {}; override fun onPartialResults(p: Bundle?) {}; override fun onEvent(t: Int, p: Bundle?) {}
                 })

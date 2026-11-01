@@ -18,3 +18,9 @@
 
 ## Privacy
 Wake word, speech recognition (with the Whisper model), the local brain and memory run on the phone. Network is OFF by default; model downloads and the optional online provider only work after you allow network access. Standby audio is never uploaded.
+
+## If recognition is poor (what to check)
+1. **Which speech engine is active?** The main screen shows "ASR <engine> <ms>" after each turn. Default Whisper Base scores 93–99% WER on Tunisian speech (see LANGUAGE_BENCHMARK) — import the Tunisian Whisper Small (MODEL_INSTALL.md) or, if you accept network use, turn on Settings → Online providers → Allow network + Hybrid so Android's recognizer (Google ar-TN) is allowed to use its server model.
+2. **Android recognizer silent or wrong?** It handles one language per turn (taken from Settings → Language) and, with network off, needs an *offline pack* (Google app → Voice → Offline speech recognition). The red line on the main screen names the missing pack.
+3. **Microphone level**: Settings → Wake word shows RMS/peak. Peaks below ~2500 while speaking normally mean low gain: speak closer / report the numbers.
+4. **Slow replies**: the first local-LLM answer after idle reads the whole prompt (several seconds on a phone); the app pre-loads speech and language models while it says "إي، نسمعك", and models stay loaded for 5 minutes. Open-ended Arabic/Tunisian answers from the 1.7B model are often wrong — commands (call, message, reminder, camera, volume…) do not use it.
