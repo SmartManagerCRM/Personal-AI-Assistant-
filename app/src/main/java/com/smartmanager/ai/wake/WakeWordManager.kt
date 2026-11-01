@@ -6,6 +6,7 @@ import com.k2fsa.sherpa.onnx.*
 import com.smartmanager.ai.audio.AudioConsumer
 import com.smartmanager.ai.audio.MicHub
 import com.smartmanager.ai.core.wake.SentencePieceEncoder
+import com.smartmanager.ai.core.wake.WakePhrase
 import com.smartmanager.ai.data.SettingsStore
 import com.smartmanager.ai.models.ModelCatalog
 import com.smartmanager.ai.models.ModelManager
@@ -49,7 +50,8 @@ class WakeWordManager @Inject constructor(
         val bpe = try { SentencePieceEncoder(File(dir, "bpe.model").readBytes()) } catch (e: Exception) { return fail("bpe.model unreadable: ${e.message}") }
         val threshold = (0.5f - 0.4f * sensitivity.coerceIn(0f, 1f)).coerceIn(0.1f, 0.5f)   // higher sensitivity → lower threshold
         val boost = 1.0f + 1.0f * sensitivity.coerceIn(0f, 1f)
-        val line = bpe.keywordLine(phrase, boost, threshold) ?: return fail("\"$phrase\" cannot be written with this model's vocabulary (English letters only)")
+        val latin = WakePhrase.toLatin(phrase)   // Arabic-script words → phonetic Latin spelling (the model only knows English letters)
+        val line = (if (latin.isBlank()) null else bpe.keywordLine(latin, boost, threshold)) ?: return fail("\"$phrase\" (heard as \"$latin\") cannot be written with this model's vocabulary — try a Latin spelling")
         val kwFile = File(dir, "keywords.txt").apply { writeText(line + "\n") }
         return try {
             fun f(prefix: String) = dir.listFiles()!!.filter { it.name.startsWith(prefix) && it.name.endsWith(".onnx") }.minByOrNull { if (it.name.contains("int8")) 0 else 1 }!!.absolutePath

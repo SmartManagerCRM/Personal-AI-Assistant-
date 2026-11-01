@@ -23,4 +23,15 @@ class WakeWordTokenizerTest {
     }
 
     @Test fun `whitespace and case are normalised`() { assertEquals(bpe.encode("HEY SMART"), bpe.encode("  HEY   SMART ")) }
+
+    @Test fun `mixed arabic and english wake phrase is converted and tokenisable`() {
+        assertEquals("ASLAMA SMART", com.smartmanager.ai.core.wake.WakePhrase.toLatin("عسلامة Smart"))
+        assertEquals("HEY SMART", com.smartmanager.ai.core.wake.WakePhrase.toLatin("Hey Smart"))
+        assertEquals("SMART", com.smartmanager.ai.core.wake.WakePhrase.toLatin("سمارت"))
+        assertEquals("AKHA", com.smartmanager.ai.core.wake.WakePhrase.toLatin("3a5a"))
+        for (p in listOf("عسلامة Smart", "عسلامة سمارت", "يا سمارت", "ya smart", "3aslema smart")) {
+            val latin = com.smartmanager.ai.core.wake.WakePhrase.toLatin(p)
+            assertNotNull("'$p' → '$latin'", bpe.keywordLine(latin, 1.5f, 0.25f))
+        }
+    }
 }

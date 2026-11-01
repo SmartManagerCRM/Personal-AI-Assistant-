@@ -99,7 +99,8 @@ fun WakeScreen(vm: AppViewModel, onStartStandby: () -> Unit, onModels: () -> Uni
     Screen(stringResource(R.string.s_wake), onBack) {
         item { CardBox {
             OutlinedTextField(phrase, { phrase = it }, Modifier.fillMaxWidth(), label = { Text("Wake phrase") }, singleLine = true)
-            Muted("Changing the phrase re-targets an open-vocabulary spotter; it is NOT a trained model for that phrase. English letters only; check detection and tune sensitivity.")
+            Text("Detector listens for: ${com.smartmanager.ai.core.wake.WakePhrase.toLatin(phrase).ifBlank { "—" }}", color = MaterialTheme.colorScheme.secondary)
+            Muted("The spotter only knows English sounds, so Arabic words are converted to a phonetic Latin spelling (عسلامة → ASLAMA). Not exact: if it does not trigger, type your own Latin spelling (e.g. “Aslema Smart”) and raise sensitivity. Changing the phrase re-targets an open-vocabulary spotter; it is NOT a trained model for that phrase.")
             Button(onClick = { vm.update { it.copy(wakePhrase = phrase.trim()) }; if (ui.standby) onStartStandby() }, enabled = phrase.isNotBlank() && phrase.trim() != cfg.wakePhrase) { Text(stringResource(R.string.save)) }
         } }
         item { CardBox {
